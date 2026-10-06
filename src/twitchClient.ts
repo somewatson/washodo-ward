@@ -4,14 +4,15 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 export class TwitchClient {
-    private clientId = process.env.TWITCH_CLIENT_ID;
-    private clientSecret = process.env.TWITCH_CLIENT_SECRET;
+    private globalClientId = process.env.TWITCH_CLIENT_ID;
+    private globalClientSecret = process.env.TWITCH_CLIENT_SECRET;
     private accessToken: string | null = null;
 
-    async getAccessToken(): Promise<string> {
-        if (this.accessToken) return this.accessToken;
+    async getAccessToken(clientId?: string, clientSecret?: string): Promise<string> {
+        const id = clientId || this.globalClientId;
+        const secret = clientSecret || this.globalClientSecret;
 
-        if (!this.clientId || !this.clientSecret) {
+        if (!id || !secret) {
             console.warn('⚠️ Twitch credentials missing. API will be in limited mode.');
             return 'dummy-token';
         }
@@ -19,30 +20,30 @@ export class TwitchClient {
         try {
             const response = await axios.post('https://id.twitch.tv/oauth2/token', null, {
                 params: {
-                    client_id: this.clientId,
-                    client_secret: this.clientSecret,
+                    client_id: id,
+                    client_secret: secret,
                     grant_type: 'client_credentials',
                 },
             });
-            this.accessToken = response.data.access_token;
-            if (!this.accessToken) throw new Error('Twitch API did not return an access token');
-            return this.accessToken;
+            const token = response.data.access_token;
+            if (!token) throw new Error('Twitch API did not return an access token');
+            return token;
         } catch (error: any) {
             console.error('Error fetching Twitch access token:', error.response?.data || error.message);
-            // Fallback to dummy token to allow API to start even without credentials
             return 'dummy-token';
         }
     }
 
-    async getLiveStreamers(usernames: string[]): Promise<any[]> {
-        const token = await this.getAccessToken();
+    async getLiveStreamers(usernames: string[], clientId?: string, clientSecret?: string): Promise<any[]> {
+        const id = clientId || this.globalClientId;
+        const token = await this.getAccessToken(clientId, clientSecret);
         try {
             const response = await axios.get('https://api.twitch.tv/helix/streams', {
                 params: {
                     user_login: usernames,
                 },
                 headers: {
-                    'Client-ID': this.clientId || 'dummy-id',
+                    'Client-ID': id || 'dummy-id',
                     'Authorization': `Bearer ${token}`,
                 },
             });
@@ -50,15 +51,13 @@ export class TwitchClient {
             const streams = response.data.data;
             if (!streams || streams.length === 0) return [];
 
-            // The /streams endpoint provides stream info (title, thumbnail) but NOT user info (profile image).
-            // We need to fetch user info for those who are live to get their profile pictures.
             const userIds = streams.map((s: any) => s.user_id);
             const userResponse = await axios.get('https://api.twitch.tv/helix/users', {
                 params: {
                     id: userIds,
                 },
                 headers: {
-                    'Client-ID': this.clientId || 'dummy-id',
+                    'Client-ID': id || 'dummy-id',
                     'Authorization': `Bearer ${token}`,
                 },
             });

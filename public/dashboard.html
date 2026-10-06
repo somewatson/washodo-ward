@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | friends.washodo.tv</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #121212;
+            color: #f3f4f6;
+            margin: 0;
+            padding: 0;
+            display: flex;
+        }
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            background-color: #1e1e1e;
+            border-right: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+        }
+        .sidebar-header {
+            padding: 24px;
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: #a970ff;
+            border-bottom: 1px solid #333;
+        }
+        .nav-links {
+            flex: 1;
+            padding: 20px 0;
+        }
+        .nav-item {
+            padding: 12px 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #9ca3af;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+        .nav-item:hover, .nav-item.active {
+            background-color: #252525;
+            color: #fff;
+            border-left: 4px solid #a970ff;
+        }
+        .main-content {
+            margin-left: 260px;
+            padding: 40px;
+            width: 100%;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+        }
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary { background-color: #a970ff; color: white; }
+        .btn-primary:hover { background-color: #b78bff; }
+        .btn-danger { background-color: #ef4444; color: white; }
+        .btn-danger:hover { background-color: #dc2626; }
+        .card {
+            background-color: #1e1e1e;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .group-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .group-card {
+            background-color: #1e1e1e;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 20px;
+            transition: border-color 0.2s;
+            display: flex;
+            flex-direction: column;
+        }
+        .group-card:hover { border-color: #a970ff; }
+        .group-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .group-name { font-weight: 600; font-size: 1.1rem; }
+        .member-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        .member-tag {
+            background: #2a2a2a;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            color: #aaa;
+        }
+        .widget-url-box {
+            background: #121212;
+            padding: 10px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            color: #38bdf8;
+            word-break: break-all;
+            border: 1px solid #333;
+            margin-bottom: 10px;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(4px);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        .modal-content {
+            background: #1e1e1e;
+            padding: 32px;
+            border-radius: 16px;
+            width: 450px;
+            border: 1px solid #444;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .form-group {
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .form-group label { font-size: 0.875rem; color: #9ca3af; }
+        .form-group input, .form-group select {
+            background: #121212;
+            border: 1px solid #333;
+            padding: 12px;
+            border-radius: 8px;
+            color: white;
+            font-family: inherit;
+        }
+        .webhook-item {
+            background: #252525;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            border: 1px solid #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">friends.washodo</div>
+        <div class="nav-links">
+            <a href="#" class="nav-item active" onclick="showPage('dashboard')">Dashboard</a>
+            <a href="#" class="nav-item" onclick="showPage('groups')">My Groups</a>
+            <a href="#" class="nav-item" onclick="showPage('settings')">Settings</a>
+            <a href="#" class="nav-item" id="adminNavLink" style="display: none;" onclick="openAdminModal()">Admin</a>
+        </div>
+    </div>
+    <div class="main-content">
+        <div class="header">
+            <h1>My Dashboard</h1>
+            <button class="btn btn-primary" onclick="openModal('groupModal')">+ Create Group</button>
+        </div>
+
+        <div class="group-grid" id="groupGrid">
+            <!-- Groups will be injected here -->
+        </div>
+    </div>
+
+    <!-- Admin Settings Modal -->
+    <div class="modal" id="adminModal">
+        <div class="modal-content">
+            <h2>Instance Settings</h2>
+            <p style="font-size: 0.85rem; color: #9ca3af; margin-bottom: 20px;">Configure your own Twitch API keys. If left empty, the system will use global SaaS keys.</p>
+            <div class="form-group">
+                <label>Twitch Client ID</label>
+                <input type="text" id="adminClientId" placeholder="Your Client ID">
+            </div>
+            <div class="form-group">
+                <label>Twitch Client Secret</label>
+                <input type="password" id="adminClientSecret" placeholder="Your Client Secret">
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                <button class="btn" onclick="closeModal('adminModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveAdminKeys()">Save Keys</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Group Modal -->
+    <div class="modal" id="groupModal">
+        <div class="modal-content">
+            <h2>Create New Group</h2>
+            <div class="form-group">
+                <label>Group Name</label>
+                <input type="text" id="groupName" placeholder="e.g. The Boys">
+            </div>
+            <div class="form-group">
+                <label>Streamers (comma separated)</label>
+                <input type="text" id="groupStreamers" placeholder="username1, username2">
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                <button class="btn" onclick="closeModal('groupModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveGroup()">Create Group</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Group Settings Modal -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <h2>Group Settings</h2>
+            <div class="form-group">
+                <label>Status Message (displays on widget)</label>
+                <input type="text" id="groupStatusMsg" placeholder="e.g. Our favorite streamers!">
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                <button class="btn" onclick="closeModal('settingsModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveStatusMsg()">Save Message</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notifications Modal -->
+    <div class="modal" id="notifyModal">
+        <div class="modal-content">
+            <h2 id="notifyModalTitle">Notifications</h2>
+            
+            <div id="webhookList" style="margin-bottom: 20px;">
+                <!-- Webhooks will be listed here -->
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid #333; margin: 20px 0;">
+            
+            <h3>Add Webhook</h3>
+            <div class="form-group">
+                <label>Provider</label>
+                <select id="webhookProvider">
+                    <option value="discord">Discord</option>
+                    <option value="slack">Slack</option>
+                    <option value="generic">Generic</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Webhook URL</label>
+                <input type="text" id="webhookUrl" placeholder="https://discord.com/api/webhooks/...">
+            </div>
+            <div class="form-group">
+                <label>Payload Template</label>
+                <input type="text" id="webhookTemplate" placeholder="{{streamer}} is {{status}}! {{url}}">
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                <button class="btn" onclick="closeModal('notifyModal')">Close</button>
+                <button class="btn btn-primary" onclick="saveWebhook()">Add Webhook</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentGroupId = null;
+
+        async function loadGroups() {
+            const response = await fetch('/api/groups/all');
+            const groups = await response.json();
+            
+            const grid = document.getElementById('groupGrid');
+            grid.innerHTML = groups.map(g => `
+                <div class="group-card">
+                    <div class="group-header">
+                        <span class="group-name">${g.name}</span>
+                        <span style="font-size: 0.7rem; color: #666;">${g.stats.impressions} views / ${g.stats.clicks} clicks</span>
+                    </div>
+                    <div class="member-list">
+                        ${g.members.map(m => `<span class="member-tag">${m}</span>`).join('')}
+                    </div>
+                    <div style="font-size: 0.75rem; color: #666; margin-bottom: 5px;">OBS / Widget URL:</div>
+                    <div class="widget-url-box">${window.location.origin}/widget/${g.id}</div>
+                    <div style="margin-top: auto; padding-top: 15px; display: flex; flex-direction: column; gap: 8px;">
+                        <button class="btn" style="width: 100%; background: #333; color: #fff;" onclick="openSettingsModal('${g.id}', '${g.status_message || ''}')">Edit Widget Message</button>
+                        <button class="btn" style="width: 100%; background: #333; color: #fff;" onclick="openNotifyModal('${g.id}', '${g.name}')">Manage Notifications</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function checkAdmin() {
+            try {
+                const response = await fetch('/api/me');
+                const data = await response.json();
+                if (data.isAdmin) {
+                    document.getElementById('adminNavLink').style.display = 'flex';
+                }
+            } catch (e) {
+                console.error('Error checking admin status:', e);
+            }
+        }
+
+        function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+        async function saveGroup() {
+            const name = document.getElementById('groupName').value;
+            const streamers = document.getElementById('groupStreamers').value.split(',').map(s => s.trim());
+            
+            await fetch('/api/groups', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, streamers })
+            });
+
+            closeModal('groupModal');
+            loadGroups();
+        }
+
+        function openSettingsModal(groupId, currentMsg) {
+            currentGroupId = groupId;
+            document.getElementById('groupStatusMsg').value = currentMsg;
+            openModal('settingsModal');
+        }
+
+        async function saveStatusMsg() {
+            const statusMessage = document.getElementById('groupStatusMsg').value;
+            await fetch(`/api/groups/${currentGroupId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ statusMessage })
+            });
+            closeModal('settingsModal');
+            loadGroups();
+        }
+
+        function openAdminModal() {
+            openModal('adminModal');
+            // We could fetch current keys here
+        }
+
+        async function saveAdminKeys() {
+            const clientId = document.getElementById('adminClientId').value;
+            const clientSecret = document.getElementById('adminClientSecret').value;
+            
+            const res = await fetch('/api/admin/keys', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ clientId, clientSecret })
+            });
+            
+            if (res.ok) {
+                alert('API Keys updated successfully!');
+                closeModal('adminModal');
+            } else {
+                alert('Failed to update API keys.');
+            }
+        }
+
+        async function openNotifyModal(groupId, groupName) {
+            currentGroupId = groupId;
+            document.getElementById('notifyModalTitle').innerText = `Notifications: ${groupName}`;
+            
+            const response = await fetch(`/api/notifications/${groupId}`);
+            const webhooks = await response.json();
+            
+            const list = document.getElementById('webhookList');
+            list.innerHTML = webhooks.length ? webhooks.map(w => `
+                <div class="webhook-item">
+                    <span><strong>${w.provider}</strong>: ${w.url.substring(0, 30)}...</span>
+                    <button class="btn btn-danger" style="padding: 4px 8px; font-size: 0.7rem;" onclick="deleteWebhook('${w.id}')">Delete</button>
+                </div>
+            `).join('') : '<div style="color: #666; font-size: 0.85rem;">No webhooks configured.</div>';
+            
+            openModal('notifyModal');
+        }
+
+        async function saveWebhook() {
+            const url = document.getElementById('webhookUrl').value;
+            const template = document.getElementById('webhookTemplate').value;
+            const provider = document.getElementById('webhookProvider').value;
+
+            if (!url || !template) return alert('Please fill all fields');
+
+            await fetch('/api/notifications', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ groupId: currentGroupId, url, template, provider })
+            });
+
+            document.getElementById('webhookUrl').value = '';
+            document.getElementById('webhookTemplate').value = '';
+            await openNotifyModal(currentGroupId, 'Group'); // Refresh list
+        }
+
+        async function deleteWebhook(webhookId) {
+            if (!confirm('Delete this webhook?')) return;
+            await fetch(`/api/notifications/${webhookId}`, { method: 'DELETE' });
+            await openNotifyModal(currentGroupId, 'Group'); // Refresh list
+        }
+
+        loadGroups();
+        checkAdmin();
+    </script>
+</body>
+</html>

@@ -13,11 +13,13 @@ The system must move from a static, hardcoded configuration to a dynamic, data-d
     - *Paid Tier*: Full control over group members.
 - **Streamer Cache**: A centralized database table storing the latest status, thumbnails, and profile info of all tracked streamers to minimize Twitch API calls.
 - **Analytics**: Track impressions and clicks per widget/group.
+- **Notification Destinations**: Webhook URLs and email preferences for status alerts.
 
 ### Tech Stack Evolution
-- **Backend**: Transition to a full API (Express) with a persistent database (PostgreSQL/MongoDB).
+- **Backend**: Transition to a full API (Express) with a persistent database (better-sqlite3).
 - **Frontend**: Implementation of a User Dashboard for group management.
 - **Real-time**: Implementation of WebSockets or optimized polling for the OBS browser source.
+- **Notifications**: Generic Webhook Dispatcher and transactional email integration.
 
 ## 3. Tiered Feature Model
 
@@ -28,6 +30,7 @@ The system must move from a static, hardcoded configuration to a dynamic, data-d
 | **Customization** | Standard Washodo Themes | Custom Colors, Fonts, and Branding |
 | **Privacy** | Public Widgets | Private/Password-Protected Views |
 | **Analytics** | Basic view counts | Detailed engagement tracking |
+| **Notifications** | Basic Webhooks | Advanced Templates & Email Alerts |
 
 ## 4. Widget Ecosystem & Viral Marketing
 The product grows by being visible on the platforms where the users already are.
@@ -45,7 +48,19 @@ To measure success and provide value to paid users, the system will track:
 - **Page Views**: Tracking visits to the public `/status/[groupId]` pages.
 - **Conversion Tracking**: Monitoring the journey from "Widget Click" $\rightarrow$ "Landing Page" $\rightarrow$ "Sign Up".
 
-## 6. Implementation Roadmap
+## 6. Expansion: Notification Gateway
+Transform the status tool into a monitoring suite that pushes data to other platforms.
+
+### Generic Webhook Dispatcher
+- **Platform Agnostic**: Support for Discord, Slack, MS Teams, Mattermost, and custom endpoints.
+- **Payload Templates**: User-definable JSON templates with variables (e.g., `{{streamer}} is now LIVE!`).
+- **Transition Triggers**: Dispatch alerts only on status changes (Offline $\rightarrow$ Online).
+
+### Email Integration
+- **Transactional Email**: Use of API-based providers (e.g., SendGrid/Postmark) for reliable delivery.
+- **Alerts**: Email notifications for high-priority streamer updates.
+
+## 7. Implementation Roadmap
 
 ### Phase 1: The Foundation
 - Implement Twitch OAuth for user login.
@@ -66,3 +81,8 @@ To measure success and provide value to paid users, the system will track:
 ### Phase 4: Growth & Branding
 - Launch the `friends.washodo.tv` landing page.
 - Implement the viral "Powered by" branding on free widgets.
+
+### Phase 5: Notification Suite & Legal
+- Implement the Generic Webhook Dispatcher and Email Service.
+- Add notification management to the User Dashboard.
+- Update LICENSE to allow self-hosting (non-commercial) while prohibiting commercial redistribution.

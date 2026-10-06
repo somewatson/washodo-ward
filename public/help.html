@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Help Center | friends.washodo.tv</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #121212;
+            color: #f3f4f6;
+            margin: 0;
+            padding: 40px 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        h1 { color: #a970ff; font-size: 2.5rem; }
+        h2 { color: #a970ff; border-bottom: 1px solid #333; padding-bottom: 10px; margin-top: 40px; }
+        h3 { color: #ddd; margin-top: 25px; }
+        .card {
+            background: #1e1e1e;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #333;
+            margin-bottom: 20px;
+        }
+        .badge {
+            background: #a970ff;
+            color: #fff;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .btn-back {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #333;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            transition: background 0.2s;
+        }
+        .btn-back:hover { background: #444; }
+        code {
+            background: #000;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-family: monospace;
+            color: #a970ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/dashboard" class="btn-back">&larr; Back to Dashboard</a>
+        
+        <div class="header">
+            <h1>Help Center</h1>
+            <p>Everything you need to know about managing your streamer groups.</p>
+        </div>
+
+        <section>
+            <h2>🚀 Getting Started</h2>
+            <div class="card">
+                <h3>Signing In</h3>
+                <p>Simply click the <strong>Login with Twitch</strong> button. We use OAuth2 to securely verify your identity without ever seeing your password.</p>
+                
+                <h3>Tiers</h3>
+                <p><span class="badge">Free</span> Groups must include at least one Washodo core member.</p>
+                <p><span class="badge">Paid</span> Full customizability for your groups.</p>
+            </div>
+        </section>
+
+        <section>
+            <h2>👥 Group Management</h2>
+            <div class="card">
+                <h3>Creating Groups</h3>
+                <p>Use the <strong>Create New Group</strong> button. Enter a name and a comma-separated list of Twitch usernames.</p>
+                
+                <h3>Status Messages</h3>
+                <p>You can set a custom message (e.g., <code>"The gang is all here!"</code>) that appears at the top of your OBS widgets.</p>
+            </div>
+        </section>
+
+        <section>
+            <h2>🖼️ Widget Setup</h2>
+            <div class="card">
+                <h3>OBS Browser Source</h3>
+                <p>1. Copy your unique Widget URL from the dashboard.<br>
+                   2. In OBS, add a <strong>Browser Source</strong>.<br>
+                   3. Paste the URL and set your preferred dimensions.</p>
+                
+                <h3>Web Embeds</h3>
+                <p>Widgets are responsive and can be linked in Twitch "About" panels or social bios.</p>
+            </div>
+        </section>
+
+        <section>
+            <h2>🔔 Notifications</h2>
+            <div class="card">
+                <h3>Webhooks</h3>
+                <p>We support <strong>Discord</strong>, <strong>Slack</strong>, and <strong>Microsoft Teams</strong>. Just paste your webhook URL into the group's notification settings.</p>
+                
+                <h3>Custom Payloads</h3>
+                <p>Use variables like <code>{{streamer}}</code>, <code>{{status}}</code>, and <code>{{url}}</code> to customize how notifications appear in your chat.</p>
+            </div>
+        </section>
+
+        <section>
+            <h2>❓ FAQ</h2>
+            <div class="card">
+                <h3>Update Frequency</h3>
+                <p>Statuses are updated every 5 minutes via a background worker.</p>
+                
+                <h3>Privacy</h3>
+                <p>We only store public Twitch data. Engagement metrics are aggregated and anonymized.</p>
+            </div>
+        </section>
+    </div>
+</body>
+</html>
