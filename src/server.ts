@@ -341,12 +341,19 @@ export class ApiServer {
         router.get('/api/public/status', async (req, res) => {
             try {
                 const db = await dbManager.getDb();
-                const communityGroup = await db.get('SELECT id FROM groups ORDER BY created_at ASC LIMIT 1') as any;
+                
+                // Prioritize the official Washodo Members group for the public status page
+                let communityGroup = await db.get('SELECT id FROM groups WHERE id = ?', 'group-washodo-members') as any;
+                
+                if (!communityGroup) {
+                    // Fallback to the first group created if the official one isn't found
+                    communityGroup = await db.get('SELECT id FROM groups ORDER BY created_at ASC LIMIT 1') as any;
+                }
                 
                 if (!communityGroup) {
                     return res.json([]);
                 }
-
+        
                 const statuses = await statusService.getStatusForGroup(communityGroup.id);
                 res.json(statuses);
             } catch (e: any) {
