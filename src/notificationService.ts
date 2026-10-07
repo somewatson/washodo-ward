@@ -17,17 +17,16 @@ export class NotificationService {
     async createWebhook(groupId: string, url: string, template: string, provider: string): Promise<string> {
         const id = uuidv4();
         const db = await this.dbPromise;
-        const stmt = db.prepare(`
+        await db.run(`
             INSERT INTO webhook_destinations (id, group_id, url, payload_template, provider, is_active)
             VALUES (?, ?, ?, ?, ?, 1)
-        `);
-        stmt.run(id, groupId, url, template, provider);
+        `, [id, groupId, url, template, provider]);
         return id;
     }
 
     async getWebhooksForGroup(groupId: string): Promise<WebhookDestination[]> {
         const db = await this.dbPromise;
-        const rows = db.prepare('SELECT * FROM webhook_destinations WHERE group_id = ? AND is_active = 1').all(groupId) as any[];
+        const rows = await db.all('SELECT * FROM webhook_destinations WHERE group_id = ? AND is_active = 1', [groupId]) as any[];
         return rows.map(r => ({
             id: r.id,
             groupId: r.group_id,
@@ -40,7 +39,7 @@ export class NotificationService {
 
     async deleteWebhook(id: string) {
         const db = await this.dbPromise;
-        db.prepare('DELETE FROM webhook_destinations WHERE id = ?').run(id);
+        await db.run('DELETE FROM webhook_destinations WHERE id = ?', [id]);
     }
 
     async notifyStatusChange(groupId: string, streamerLogin: string, displayName: string, isLive: boolean) {
