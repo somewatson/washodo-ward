@@ -342,20 +342,32 @@ export class ApiServer {
             try {
                 const db = await dbManager.getDb();
                 
-                // Prioritize the official Washodo Members group for the public status page
-                let communityGroup = await db.get('SELECT id FROM groups WHERE id = ?', 'group-washodo-members') as any;
-                
-                if (!communityGroup) {
-                    // Fallback to the first group created if the official one isn't found
-                    communityGroup = await db.get('SELECT id FROM groups ORDER BY created_at ASC LIMIT 1') as any;
+                // Prioritize the official Washodo groups for the public status page
+                const officialGroups = ['group-washodo-members', 'group-washodo-friends'];
+                const results: any[] = [];
+                const seenLogins = new Set<string>();
+
+                for (const groupId of officialGroups) {
+                    const statuses = await statusService.getStatusForGroup(groupId);
+                    for (const s of statuses) {
+                        if (!seenLogins.has(s.streamer_login)) {
+                            results.push(s);
+                            seenLogins.add(s.streamer_login);
+                        }
+                    }
                 }
                 
-                if (!communityGroup) {
+                if (results.length === 0) {
+                    // Fallback to the first group created if no official groups are found/populated
+                    const fallbackGroup = await db.get('SELECT id FROM groups ORDER BY created_at ASC LIMIT 1') as any;
+                    if (fallbackGroup) {
+                        const statuses = await statusService.getStatusForGroup(fallbackGroup.id);
+                        return res.json(statuses);
+                    }
                     return res.json([]);
                 }
         
-                const statuses = await statusService.getStatusForGroup(communityGroup.id);
-                res.json(statuses);
+                res.json(results);
             } catch (e: any) {
                 console.error('Public status error:', e);
                 res.status(500).send('Internal Server Error');

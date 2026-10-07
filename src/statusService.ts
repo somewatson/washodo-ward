@@ -104,9 +104,17 @@ export class StatusService {
         
         const placeholders = logins.map(() => '?').join(',');
         const statuses = await db.all(`
-            SELECT * FROM streamer_cache 
-            WHERE streamer_login IN (${placeholders})
-        `, ...logins) as any[];
+            SELECT 
+                gm.streamer_login, 
+                COALESCE(sc.display_name, gm.streamer_login) as display_name, 
+                sc.profile_image_url, 
+                COALESCE(sc.is_live, 0) as is_live, 
+                sc.stream_title, 
+                sc.thumbnail_url 
+            FROM group_members gm
+            LEFT JOIN streamer_cache sc ON gm.streamer_login = sc.streamer_login
+            WHERE gm.group_id = ?
+        `, groupId) as any[];
         
         return statuses;
     }
