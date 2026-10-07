@@ -3,7 +3,7 @@ import { open } from 'sqlite';
 import path from 'path';
 
 export class DbManager {
-    private db: sqlite3.Database | null = null;
+    private db: any = null;
     private promiseDb: any = null;
 
     constructor() {

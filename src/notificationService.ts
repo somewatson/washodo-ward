@@ -12,11 +12,12 @@ export interface WebhookDestination {
 }
 
 export class NotificationService {
-    private db = dbManager.getDb();
+    private dbPromise = dbManager.getDb();
 
     async createWebhook(groupId: string, url: string, template: string, provider: string): Promise<string> {
         const id = uuidv4();
-        const stmt = this.db.prepare(`
+        const db = await this.dbPromise;
+        const stmt = db.prepare(`
             INSERT INTO webhook_destinations (id, group_id, url, payload_template, provider, is_active)
             VALUES (?, ?, ?, ?, ?, 1)
         `);
@@ -25,7 +26,8 @@ export class NotificationService {
     }
 
     async getWebhooksForGroup(groupId: string): Promise<WebhookDestination[]> {
-        const rows = this.db.prepare('SELECT * FROM webhook_destinations WHERE group_id = ? AND is_active = 1').all(groupId) as any[];
+        const db = await this.dbPromise;
+        const rows = db.prepare('SELECT * FROM webhook_destinations WHERE group_id = ? AND is_active = 1').all(groupId) as any[];
         return rows.map(r => ({
             id: r.id,
             groupId: r.group_id,
@@ -37,7 +39,8 @@ export class NotificationService {
     }
 
     async deleteWebhook(id: string) {
-        this.db.prepare('DELETE FROM webhook_destinations WHERE id = ?').run(id);
+        const db = await this.dbPromise;
+        db.prepare('DELETE FROM webhook_destinations WHERE id = ?').run(id);
     }
 
     async notifyStatusChange(groupId: string, streamerLogin: string, displayName: string, isLive: boolean) {
