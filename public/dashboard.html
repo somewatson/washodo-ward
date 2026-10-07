@@ -68,10 +68,9 @@
             cursor: pointer;
             transition: all 0.2s;
         }
-        .btn-primary { background-color: #a970ff; color: white; }
-        .btn-primary:hover { background-color: #b78bff; }
-        .btn-danger { background-color: #ef4444; color: white; }
-        .btn-danger:hover { background-color: #dc2626; }
+        .btn-refresh { background-color: #333; color: #fff; border: 1px solid #444; }
+        .btn-refresh:hover { background-color: #444; }
+        .btn-refresh:disabled { opacity: 0.5; cursor: not-allowed; }
         .card {
             background-color: #1e1e1e;
             border: 1px solid #333;
@@ -285,8 +284,35 @@
     <script>
         let currentGroupId = null;
 
+        async function refreshGroupStatus(groupId) {
+            const btn = document.getElementById(`refresh-btn-${groupId}`);
+            const originalText = btn.innerText;
+            
+            btn.disabled = true;
+            btn.innerText = 'Refreshing...';
+
+            try {
+                const response = await fetch(`api/status/${groupId}/refresh`, { method: 'POST' });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('Status updated successfully!');
+                } else if (response.status === 429) {
+                    alert(data.message || 'Please wait a minute before refreshing again.');
+                } else {
+                    alert('Failed to refresh status.');
+                }
+            } catch (e) {
+                console.error('Refresh error:', e);
+                alert('An error occurred while refreshing.');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = originalText;
+            }
+        }
+
         async function loadGroups() {
-            const response = await fetch('/api/groups/all');
+            const response = await fetch('api/groups/all');
             const groups = await response.json();
             
             const grid = document.getElementById('groupGrid');
@@ -302,6 +328,7 @@
                     <div style="font-size: 0.75rem; color: #666; margin-bottom: 5px;">OBS / Widget URL:</div>
                     <div class="widget-url-box">${window.location.origin}/widget/${g.id}</div>
                     <div style="margin-top: auto; padding-top: 15px; display: flex; flex-direction: column; gap: 8px;">
+                        <button class="btn btn-refresh" id="refresh-btn-${g.id}" onclick="refreshGroupStatus('${g.id}')">↻ Refresh Now</button>
                         <button class="btn" style="width: 100%; background: #333; color: #fff;" onclick="openSettingsModal('${g.id}', '${g.status_message || ''}')">Edit Widget Message</button>
                         <button class="btn" style="width: 100%; background: #333; color: #fff;" onclick="openNotifyModal('${g.id}', '${g.name}')">Manage Notifications</button>
                     </div>
@@ -311,7 +338,7 @@
 
         async function checkAdmin() {
             try {
-                const response = await fetch('/api/me');
+                const response = await fetch('api/me');
                 const data = await response.json();
                 if (data.isAdmin) {
                     document.getElementById('adminNavLink').style.display = 'flex';
@@ -328,7 +355,7 @@
             const name = document.getElementById('groupName').value;
             const streamers = document.getElementById('groupStreamers').value.split(',').map(s => s.trim());
             
-            await fetch('/api/groups', {
+            await fetch('api/groups', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, streamers })
@@ -346,7 +373,7 @@
 
         async function saveStatusMsg() {
             const statusMessage = document.getElementById('groupStatusMsg').value;
-            await fetch(`/api/groups/${currentGroupId}`, {
+            await fetch(`api/groups/${currentGroupId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ statusMessage })
@@ -364,7 +391,7 @@
             const clientId = document.getElementById('adminClientId').value;
             const clientSecret = document.getElementById('adminClientSecret').value;
             
-            const res = await fetch('/api/admin/keys', {
+            const res = await fetch('api/admin/keys', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ clientId, clientSecret })
@@ -382,7 +409,7 @@
             currentGroupId = groupId;
             document.getElementById('notifyModalTitle').innerText = `Notifications: ${groupName}`;
             
-            const response = await fetch(`/api/notifications/${groupId}`);
+            const response = await fetch(`api/notifications/${groupId}`);
             const webhooks = await response.json();
             
             const list = document.getElementById('webhookList');
@@ -403,7 +430,7 @@
 
             if (!url || !template) return alert('Please fill all fields');
 
-            await fetch('/api/notifications', {
+            await fetch('api/notifications', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ groupId: currentGroupId, url, template, provider })
@@ -416,7 +443,7 @@
 
         async function deleteWebhook(webhookId) {
             if (!confirm('Delete this webhook?')) return;
-            await fetch(`/api/notifications/${webhookId}`, { method: 'DELETE' });
+            await fetch(`api/notifications/${webhookId}`, { method: 'DELETE' });
             await openNotifyModal(currentGroupId, 'Group'); // Refresh list
         }
 

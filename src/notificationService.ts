@@ -55,7 +55,6 @@ export class NotificationService {
                 
                 if (webhook.url.startsWith('mailto:')) {
                     // Email integration simulation
-                    // In a real app, we would use nodemailer or a service like SendGrid/Postmark
                     console.log(`[Email Notification] Sending to ${webhook.url}: ${payload.message || JSON.stringify(payload)}`);
                 } else {
                     await axios.post(webhook.url, payload);
@@ -66,6 +65,13 @@ export class NotificationService {
         });
         
         await Promise.allSettled(notifications);
+    }
+
+    async notifyGroup(groupId: string, streamerName: string, status: 'live' | 'offline', login?: string) {
+        // If login is not provided, we'd typically need to look it up. 
+        // For this helper, we'll assume the login is part of the context or a generic notification.
+        const loginName = login || streamerName.toLowerCase();
+        await this.notifyStatusChange(groupId, loginName, streamerName, status === 'live');
     }
 
     private formatPayload(webhook: WebhookDestination, data: any) {

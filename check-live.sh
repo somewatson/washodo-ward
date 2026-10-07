@@ -10,15 +10,22 @@ if [ -z "$1" ]; then
 fi
 
 USERNAME=$1
-PORT=3000
-URL="http://localhost:$PORT/api/status/$USERNAME"
 API_KEY_FILE=".env"
 
-# Try to extract API_KEY from .env if it exists
+# Try to extract PORT and API_KEY from .env if it exists
+PORT=""
 API_KEY=""
 if [ -f "$API_KEY_FILE" ]; then
+    PORT=$(grep PORT "$API_KEY_FILE" | cut -d '=' -f2 | tr -d '"' | tr -d "'")
     API_KEY=$(grep API_KEY "$API_KEY_FILE" | cut -d '=' -f2 | tr -d '"' | tr -d "'")
 fi
+
+# Fallback to 3000 if PORT is not found in .env
+if [ -z "$PORT" ]; then
+    PORT=3000
+fi
+
+URL="http://localhost:$PORT/api/status/$USERNAME"
 
 echo "Checking status for $USERNAME..."
 
@@ -29,6 +36,9 @@ if [ -n "$API_KEY" ]; then
 else
     RESPONSE=$(curl -s "$URL")
 fi
+
+echo "DEBUG: RESPONSE is $RESPONSE"
+
 
 # Check if curl failed
 if [ $? -ne 0 ]; then
@@ -44,10 +54,10 @@ if echo "$RESPONSE" | grep -q "error"; then
 fi
 
 # Parse JSON response (using grep/sed to avoid dependency on jq)
-IS_LIVE=$(echo "$RESPONSE" | grep -o '"isLive":[^,}]*' | cut -d ':' -f2 | tr -d ' ')
+IS_LIVE=$(echo "$RESPONSE" | grep -o '"is_live":[^,}]*' | cut -d ':' -f2 | tr -d ' ')
 LAST_LIVE=$(echo "$RESPONSE" | grep -o '"lastLive":"[^"]*"' | cut -d '"' -f4)
 
-if [ "$IS_LIVE" = "true" ]; then
+if [ "$IS_LIVE" = "1" ] || [ "$IS_LIVE" = "true" ]; then
     echo "🟢 $USERNAME is currently LIVE!"
 else
     echo "🔴 $USERNAME is offline."
@@ -55,3 +65,4 @@ else
         echo "Last seen live: $LAST_LIVE"
     fi
 fi
+echo "RESPONSE is: $RESPONSE"

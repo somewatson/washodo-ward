@@ -7,6 +7,7 @@ import { twitchAuth } from './auth';
 import { groupService } from './groupService';
 import { statusService } from './statusService';
 import { analyticsService } from './analyticsService';
+import { notificationService } from './notificationService';
 import { sessionConfig } from './session';
 import fs from 'fs';
 import path from 'path';
@@ -24,8 +25,18 @@ export class ApiServer {
     private server: any;
 
     constructor() {
+        this.setupDatabase();
         this.setupMiddleware();
         this.setupRoutes();
+    }
+
+    private setupDatabase() {
+        const db = dbManager.getDb();
+        try {
+            db.prepare('ALTER TABLE groups ADD COLUMN last_refresh_at DATETIME').run();
+        } catch (e) {
+            // Column might already exist
+        }
     }
 
     private setupMiddleware() {
@@ -35,8 +46,10 @@ export class ApiServer {
     }
 
     private setupRoutes() {
+        const router = express.Router();
+
         // --- ADMIN ROUTES ---
-        this.app.patch('/api/admin/keys', async (req: Request, res: Response) => {
+        router.patch('/api/admin/keys', async (req: Request, res: Response) => {
             const authenticatedReq = req as AuthenticatedRequest;
             const sessionUser = authenticatedReq.session.userId;
             if (!sessionUser) return res.status(401).send('Unauthorized');
@@ -58,11 +71,11 @@ export class ApiServer {
         });
 
         // --- AUTH ROUTES ---
-        this.app.get('/auth/login', (req, res) => {
+        router.get('/auth/login', (req, res) => {
             res.redirect(twitchAuth.getAuthUrl());
         });
 
-        this.app.get('/auth/callback', async (req: Request, res: Response) => {
+        router.get('/auth/callback', async (req: Request, res: Response) => {
             const authenticatedReq = req as AuthenticatedRequest;
             const { code } = req.query;
             if (!code) return res.status(400).send('Missing code');
@@ -95,7 +108,7 @@ export class ApiServer {
             }
         });
 
-        this.app.get('/auth/logout', (req: Request, res: Response) => {
+        router.get('/auth/logout', (req: Request, res: Response) => {
             const authenticatedReq = req as AuthenticatedRequest;
             authenticatedReq.session.destroy(() => {
                 res.redirect('/');
@@ -103,7 +116,7 @@ export class ApiServer {
         });
 
         // --- GROUP ROUTES ---
-        this.app.post('/api/groups', async (req: Request, res: Response) => {
+        router.post('/api/groups', async (req: Request, res: Response) => {
             const authenticatedReq = req as AuthenticatedRequest;
             const sessionUser = authenticatedReq.session.userId;
             if (!sessionUser) return res.status(401).send('Unauthorized');
@@ -119,7 +132,7 @@ export class ApiServer {
             }
         });
 
-        this.app.patch('/api/groups/:id', async (req: Request, res: Response) => {
+        router.patch('/api/groups/:id', async (req: Request, res: Response) => {
             const authenticatedReq = req as AuthenticatedRequest;
             const sessionUser = authenticatedReq.session.userId;
             if (!sessionUser) return res.status(401).send('Unauthorized');
@@ -139,13 +152,13 @@ export class ApiServer {
             }
         });
 
-        this.app.get('/api/groups/:id', async (req, res) => {
+        router.get('/api/groups/:id', async (req, res) => {
             const group = await groupService.getGroup(req.params.id);
             if (!group) return res.status(404).send('Group not found');
             res.json(group);
         });
 
-        this.app.get('/api/groups/all', async (req: Request, res: Response) => {
+        router.get('/api/groups/all', async (req: Request, res: Response) => {
             const authenticatedReq = req as AuthenticatedRequest;
             const sessionUser = authenticatedReq.session.userId;
             if (!sessionUser) return res.status(401).send('Unauthorized');
@@ -163,12 +176,89 @@ export class ApiServer {
         });
 
         // --- STATUS & WIDGET ROUTES ---
-        this.app.get('/api/status/:groupId', async (req, res) => {
-            const statuses = await statusService.getStatusForGroup(req.params.groupId);
-            res.json(statuses);
+        router.get('/api/status/all', async (req, res) => {
+            const db = dbManager.getDb();
+            const allCached = db.prepare('SELECT * FROM streamer_cache').all() as any[];
+            
+            const statusMap: Record<string, any> = {};
+            allCached.forEach(s => {
+                statusMap[s.streamer_login] = {
+                    isLive: s.is_live === 1,
+                };
+            });
+            
+            res.json(statusMap);
         });
 
-        this.app.get('/widget/:groupId', async (req, res) => {
+        router.get('/api/status/:groupId', async (req, res) => {
+            const id = req.params.groupId;
+
+            
+            // Try to see if it's a groupId or a streamer login
+            const db = dbManager.getDb();
+            const group = db.prepare('SELECT id FROM groups WHERE id = ?').get(id);
+            
+            if (group) {
+                const statuses = await statusService.getStatusForGroup(id);
+                res.json(statuses);
+            } else {
+                // It might be a streamer login, let's return their status if found in cache
+                const cached = db.prepare('SELECT * FROM streamer_cache WHERE streamer_login = ?').get(id) as any;
+                if (cached) {
+                    res.json([cached]);
+                } else {
+                    res.json([]);
+                }
+            }
+        });
+
+        router.post('/api/status/:groupId/refresh', async (req: Request, res: Response) => {
+            const authenticatedReq = req as AuthenticatedRequest;
+            const sessionUser = authenticatedReq.session.userId;
+            const groupId = req.params.groupId as string;
+            const apiKey = req.headers['x-api-key'] as string;
+
+            const db = dbManager.getDb();
+            const group = db.prepare('SELECT owner_id, last_refresh_at FROM groups WHERE id = ?').get(groupId) as any;
+
+            if (!group) return res.status(404).send('Group not found');
+
+            // Authorization check: Group owner OR valid API key
+            const isAdmin = process.env.API_KEY && apiKey === process.env.API_KEY;
+            const isOwner = group.owner_id === sessionUser;
+
+            if (!isOwner && !isAdmin) {
+                return res.status(403).send('Unauthorized to refresh this group');
+            }
+
+            // Throttling check (1 minute)
+            if (group.last_refresh_at) {
+                const lastRefresh = new Date(group.last_refresh_at).getTime();
+                const now = Date.now();
+                const diffSeconds = Math.floor((now - lastRefresh) / 1000);
+
+                if (diffSeconds < 60) {
+                    return res.status(429).json({
+                        error: 'Throttled',
+                        message: `Please wait ${60 - diffSeconds} more seconds.`,
+                        retry_after: 60 - diffSeconds
+                    });
+                }
+            }
+
+            try {
+                await statusService.updateStatusesForGroup(groupId);
+                db.prepare('UPDATE groups SET last_refresh_at = ? WHERE id = ?').run(new Date().toISOString(), groupId);
+                
+                const updatedStatuses = await statusService.getStatusForGroup(groupId);
+                res.json({ success: true, statuses: updatedStatuses });
+            } catch (e: any) {
+                console.error('Refresh error:', e);
+                res.status(500).send('Failed to refresh status');
+            }
+        });
+
+        router.get('/widget/:groupId', async (req, res) => {
             const groupId = req.params.groupId;
             
             // Fetch group status message
@@ -186,7 +276,7 @@ export class ApiServer {
             
             const renderItems = statuses.map(s => `
                 <a href="https://twitch.tv/${s.streamer_login}" target="_blank" class="widget-item ${s.is_live ? 'live' : 'offline'}" 
-                   onclick="fetch('/api/analytics/click?groupId=${groupId}&streamer=${s.streamer_login}')">
+                   onclick="fetch('api/analytics/click?groupId=${groupId}&streamer=${s.streamer_login}')">
                     <img src="${s.profile_image_url || 'https://via.placeholder.com/32'}" class="avatar">
                     <span class="name">${s.display_name}</span>
                     <span class="status">${s.is_live ? 'LIVE' : 'Offline'}</span>
@@ -231,7 +321,7 @@ export class ApiServer {
             res.send(html);
         });
 
-        this.app.get('/api/analytics/click', async (req, res) => {
+        router.get('/api/analytics/click', async (req, res) => {
             const { groupId, streamer } = req.query;
             if (!groupId || !streamer) return res.status(400).send('Missing params');
             
@@ -243,12 +333,37 @@ export class ApiServer {
             }
         });
 
-        // --- Root Page (Existing SSR) ---
-        this.app.get('/', async (req, res) => {
-            res.redirect('/dashboard');
+        // --- Public Routes ---
+        router.get('/', async (req, res) => {
+            res.sendFile(path.join(process.cwd(), 'public/index.html'));
         });
 
-        this.app.get('/dashboard', async (req: Request, res: Response) => {
+        router.get('/status', async (req, res) => {
+            res.sendFile(path.join(process.cwd(), 'public/status.html'));
+        });
+
+        router.get('/api/public/status', async (req, res) => {
+            try {
+                // For now, we'll return statuses from the first group found in the DB 
+                // (treating it as the "Community" group). In a real SaaS, this would
+                // be based on a 'public' flag on the group.
+                const db = dbManager.getDb();
+                const communityGroup = db.prepare('SELECT id FROM groups ORDER BY created_at ASC LIMIT 1').get() as any;
+                
+                if (!communityGroup) {
+                    return res.json([]);
+                }
+
+                const statuses = await statusService.getStatusForGroup(communityGroup.id);
+                res.json(statuses);
+            } catch (e: any) {
+                console.error('Public status error:', e);
+                res.status(500).send('Internal Server Error');
+            }
+        });
+
+        // --- Root Page (Existing SSR) ---
+        router.get('/dashboard', async (req: Request, res: Response) => {
             const authenticatedReq = req as AuthenticatedRequest;
             const sessionUser = authenticatedReq.session.userId;
             if (!sessionUser) {
@@ -257,7 +372,7 @@ export class ApiServer {
             res.sendFile(path.join(process.cwd(), 'public/dashboard.html'));
         });
 
-        this.app.get('/api/me', async (req: Request, res: Response) => {
+        router.get('/api/me', async (req: Request, res: Response) => {
             const authenticatedReq = req as AuthenticatedRequest;
             const sessionUser = authenticatedReq.session.userId;
             if (!sessionUser) return res.status(401).send('Unauthorized');
@@ -272,26 +387,26 @@ export class ApiServer {
         });
 
         // --- NOTIFICATION ROUTES ---
-        this.app.get('/api/notifications/:groupId', async (req: Request, res: Response) => {
+        router.get('/api/notifications/:groupId', async (req: Request, res: Response) => {
             const authenticatedReq = req as AuthenticatedRequest;
             const sessionUser = authenticatedReq.session.userId;
             if (!sessionUser) return res.status(401).send('Unauthorized');
 
-            const { groupId } = req.params;
+            const groupId = req.params.groupId as string;
             // Security check: ensure user owns the group
             const db = dbManager.getDb();
             const group = db.prepare('SELECT owner_id FROM groups WHERE id = ?').get(groupId) as any;
             if (!group || group.owner_id !== sessionUser) return res.status(403).send('Forbidden');
 
             try {
-                const webhooks = await notificationService.getWebhooksForGroup(groupId);
+                const webhooks = await notificationService.getWebhooksForGroup(groupId as string);
                 res.json(webhooks);
             } catch (e: any) {
                 res.status(500).json({ error: e.message });
             }
         });
 
-        this.app.post('/api/notifications', async (req: Request, res: Response) => {
+        router.post('/api/notifications', async (req: Request, res: Response) => {
             const authenticatedReq = req as AuthenticatedRequest;
             const sessionUser = authenticatedReq.session.userId;
             if (!sessionUser) return res.status(401).send('Unauthorized');
@@ -311,7 +426,7 @@ export class ApiServer {
             }
         });
 
-        this.app.delete('/api/notifications/:webhookId', async (req: Request, res: Response) => {
+        router.delete('/api/notifications/:webhookId', async (req: Request, res: Response) => {
             const authenticatedReq = req as AuthenticatedRequest;
             const sessionUser = authenticatedReq.session.userId;
             if (!sessionUser) return res.status(401).send('Unauthorized');
@@ -325,12 +440,14 @@ export class ApiServer {
             if (!group || group.owner_id !== sessionUser) return res.status(403).send('Forbidden');
 
             try {
-                await notificationService.deleteWebhook(webhookId);
+                await notificationService.deleteWebhook(webhookId as string);
                 res.sendStatus(200);
             } catch (e: any) {
                 res.status(500).send('Error deleting webhook');
             }
         });
+
+        this.app.use('/', router);
     }
 
     async start() {

@@ -18,7 +18,7 @@ Create a `.env` file in the root directory with the following variables:
 ### Registering a Twitch Developer App
 1. Go to the [Twitch Developer Console](https://dev.twitch.tv/console).
 2. Register a new Application.
-3. Set the **OAuth Redirect URL** to match your `TWITCH_REDIRECT_URI`.
+3. Set the **OAuth Redirect URL** to match your `TWITCH_REDIRECT_URI`. If using a proxy, this must include the base path (e.g., `https://yourdomain.com/proxy/3001/auth/callback`).
 4. Copy the **Client ID** and generate a **Client Secret**.
 5. Add these to your `.env` file.
 
@@ -40,6 +40,10 @@ The system uses `better-sqlite3` and stores data in `database.sqlite` in the roo
 
 - **Backups**: Simply copy the `database.sqlite` file to a secure location.
 - **Migrations**: The system uses `CREATE TABLE IF NOT EXISTS`, meaning new tables are added on startup. For column additions (like `client_id`), you may need to manually update the table using a SQLite browser or `ALTER TABLE` commands if you are updating from an older version.
+
+## 🌐 Proxy & Base Path Support
+The application is designed to work with standard relative paths. If you are deploying behind a reverse proxy, ensure your proxy configuration handles path stripping or routing correctly so that requests reach the application at the root path.
+- **Important**: Ensure your `TWITCH_REDIRECT_URI` matches the actual public URL of your auth callback.
 
 ## 🔍 Troubleshooting
 - **Auth Failures**: Ensure your `TWITCH_REDIRECT_URI` matches exactly what is registered in the Twitch Console.

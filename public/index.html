@@ -3,146 +3,290 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Streamer Status</title>
+    <title>TwitchWatch | Track Your Community's Live Status</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/inter-ui@3.19.3/inter.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-
+        :root {
+            --primary: #a970ff;
+            --primary-hover: #8a4fff;
+            --bg: #0e0e10;
+            --bg-card: #1f1f23;
+            --text: #efeff1;
+            --text-muted: #adadb8;
+            --accent: #bf94ff;
+        }
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #121212;
-            color: #f3f4f6;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
             margin: 0;
-            padding: 20px;
+            padding: 0;
+            line-height: 1.6;
+        }
+        header {
             display: flex;
-            flex-direction: column;
+            justify-content: space-between;
             align-items: center;
+            padding: 20px 5%;
+            background: rgba(14, 14, 16, 0.8);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
-        h1 { 
-            color: #a970ff; 
-            font-weight: 700;
-            margin-bottom: 30px;
-            letter-spacing: -0.02em;
+        .logo {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--primary);
+            text-decoration: none;
+            letter-spacing: -1px;
         }
-        .container {
+        nav a {
+            color: var(--text);
+            text-decoration: none;
+            margin-left: 25px;
+            font-weight: 500;
+            font-size: 14px;
+            transition: color 0.2s;
+        }
+        nav a:hover { color: var(--primary); }
+        .btn {
+            padding: 10px 20px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: none;
+        }
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        .btn-outline {
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            background: transparent;
+        }
+        .btn-outline:hover {
+            background: rgba(169, 112, 255, 0.1);
+        }
+        .hero {
+            text-align: center;
+            padding: 100px 5% 60px;
             max-width: 900px;
-            width: 100%;
+            margin: 0 auto;
         }
-        .tier-section {
+        .hero h1 {
+            font-size: 64px;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 24px;
+            background: linear-gradient(to bottom right, #fff 30%, var(--primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .hero p {
+            font-size: 20px;
+            color: var(--text-muted);
             margin-bottom: 40px;
         }
-        .tier-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-            border-bottom: 1px solid #333;
-            padding-bottom: 8px;
-            margin-bottom: 20px;
-            color: #9ca3af;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
+        .hero-btns {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
         }
-        .streamer-grid {
+        .features {
+            padding: 80px 5%;
+            max-width: 1200px;
+            margin: 0 auto;
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
         }
-        .streamer-card {
-            background-color: #1e1e1e;
-            border-radius: 12px;
+        .feature-card {
+            background: var(--bg-card);
+            padding: 40px;
+            border-radius: 16px;
+            transition: transform 0.2s;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .feature-card:hover { transform: translateY(-5px); }
+        .feature-card h3 {
+            font-size: 22px;
+            margin-bottom: 12px;
+            color: var(--accent);
+        }
+        .feature-card p {
+            color: var(--text-muted);
+            font-size: 16px;
+        }
+        .pricing {
+            padding: 80px 5%;
+            text-align: center;
+        }
+        .pricing h2 {
+            font-size: 48px;
+            margin-bottom: 48px;
+        }
+        .pricing-grid {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        .price-card {
+            background: var(--bg-card);
+            padding: 40px;
+            border-radius: 20px;
+            width: 320px;
+            border: 1px solid rgba(255,255,255,0.05);
             display: flex;
             flex-direction: column;
-            overflow: hidden;
-            transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
-            border: 1px solid #333;
-            text-decoration: none;
-            color: inherit;
+        }
+        .price-card.featured {
+            border: 2px solid var(--primary);
             position: relative;
         }
-        .streamer-card:hover {
-            transform: translateY(-4px);
-            border-color: #a970ff;
-            background-color: #252525;
-        }
-        .stream-thumbnail {
-            width: 100%;
-            height: 160px;
-            object-fit: cover;
-            border-bottom: 1px solid #333;
-        }
-        .streamer-info {
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .user-meta {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .profile-pic {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background-color: #333;
-            border: 1px solid #444;
-        }
-        .username {
-            font-weight: 600;
-            font-size: 1.1rem;
-            color: #fff;
-        }
-        .stream-title {
-            font-size: 0.875rem;
-            color: #9ca3af;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            line-height: 1.4;
-        }
-        .status-box {
+        .featured-badge {
             position: absolute;
-            top: 12px;
-            right: 12px;
-            background: rgba(0, 0, 0, 0.75);
-            backdrop-filter: blur(4px);
-            padding: 4px 10px;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--primary);
+            color: white;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 4px 12px;
             border-radius: 20px;
+            text-transform: uppercase;
+        }
+        .price-card h3 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        .price {
+            font-size: 48px;
+            font-weight: 800;
+            margin-bottom: 30px;
+        }
+        .price span {
+            font-size: 16px;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+        .features-list {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 40px 0;
+            text-align: left;
+            flex-grow: 1;
+        }
+        .features-list li {
+            margin-bottom: 12px;
+            color: var(--text-muted);
+            font-size: 15px;
             display: flex;
             align-items: center;
-            font-size: 0.7rem;
-            font-weight: 700;
-            z-index: 10;
-            border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        .status-indicator {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 6px;
+        .features-list li::before {
+            content: '✓';
+            color: var(--primary);
+            margin-right: 10px;
+            font-weight: bold;
         }
-        .live { 
-            background-color: #ff4b4b; 
-            box-shadow: 0 0 10px #ff4b4b; 
-            animation: pulse 2s infinite;
-        }
-        .offline { background-color: #555; }
-        .status-label {
-            color: #fff;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
+        footer {
+            padding: 60px 5%;
+            text-align: center;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            color: var(--text-muted);
+            font-size: 14px;
         }
     </style>
 </head>
 <body>
-    <h1>Streamer Status</h1>
-    <div class="container">
-        <!-- CONTENT_PLACEHOLDER -->
-    </div>
+    <header>
+        <a href="/" class="logo">TwitchWatch</a>
+        <nav>
+            <a href="/status">Public Status</a>
+            <a href="/dashboard">Dashboard</a>
+            <a href="/auth/login" class="btn btn-outline">Log In</a>
+            <a href="/auth/login" class="btn btn-primary">Get Started</a>
+        </nav>
+    </header>
+
+    <section class="hero">
+        <h1>Your community's live status,<br>automated and effortless.</h1>
+        <p>Stop manually checking who's live. TwitchWatch monitors your favorite streamers and provides a real-time status board for your community.</p>
+        <div class="hero-btns">
+            <a href="/auth/login" class="btn btn-primary">Start Tracking Now</a>
+            <a href="/status" class="btn btn-outline">View Public Status</a>
+        </div>
+    </section>
+
+    <section class="features">
+        <div class="feature-card">
+            <h3>⚡ Real-time Tracking</h3>
+            <p>Automatic polling of Twitch APIs to keep your status board updated every few minutes without lifting a finger.</p>
+        </div>
+        <div class="feature-card">
+            <h3>📊 Analytics Integration</h3>
+            <p>Track impressions and clicks on your status widgets to understand how your community engages with your streamers.</p>
+        </div>
+        <div class="feature-card">
+            <h3>🔔 Instant Notifications</h3>
+            <p>Connect your Mattermost or Discord webhooks to get notified the second a tracked member goes live.</p>
+        </div>
+    </section>
+
+    <section class="pricing">
+        <h2>Simple, Transparent Pricing</h2>
+        <div class="pricing-grid">
+            <div class="price-card">
+                <h3>Free</h3>
+                <div class="price">$0<span>/mo</span></div>
+                <ul class="features-list">
+                    <li>Up to 5 tracked streamers</li>
+                    <li>Public status page</li>
+                    <li>Basic analytics</li>
+                    <li>1 Notification channel</li>
+                </ul>
+                <a href="/auth/login" class="btn btn-outline">Join Free</a>
+            </div>
+            <div class="price-card featured">
+                <div class="featured-badge">Most Popular</div>
+                <h3>Pro</h3>
+                <div class="price">$9<span>/mo</span></div>
+                <ul class="features-list">
+                    <li>Up to 50 tracked streamers</li>
+                    <li>Custom status messages</li>
+                    <li>Advanced analytics</li>
+                    <li>Unlimited notifications</li>
+                    <li>Priority support</li>
+                </ul>
+                <a href="/auth/login" class="btn btn-primary">Go Pro</a>
+            </div>
+            <div class="price-card">
+                <h3>Enterprise</h3>
+                <div class="price">Custom</div>
+                <ul class="features-list">
+                    <li>Unlimited streamers</li>
+                    <li>White-label status pages</li>
+                    <li>API access for custom tools</li>
+                    <li>Dedicated account manager</li>
+                    <li>Custom SLAs</li>
+                </ul>
+                <a href="/auth/login" class="btn btn-outline">Contact Sales</a>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <p>&copy; 2026 TwitchWatch. Built by <a href="https://somewatson.com" target="_blank" style="color: var(--primary); text-decoration: none;">Somewatson</a> for the <a href="https://washodo.tv" target="_blank" style="color: var(--primary); text-decoration: none;">Washodo</a> community.</p>
+    </footer>
 </body>
 </html>

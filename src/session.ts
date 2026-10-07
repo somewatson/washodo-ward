@@ -10,9 +10,10 @@ const isTest = process.env.NODE_ENV === 'test';
 export const sessionConfig = session({
     store: isTest ? undefined : (function() {
         try {
-            const SQLiteStore = require('connect-sqlite3');
-            const StoreClass = SQLiteStore.default || SQLiteStore;
-            return new StoreClass({ db: 'sessions.sqlite' });
+            const session = require('express-session');
+            const SQLiteStoreFactory = require('connect-sqlite3');
+            const SQLiteStore = SQLiteStoreFactory(session);
+            return new SQLiteStore({ db: 'sessions.sqlite' });
         } catch (e) {
             console.error('Failed to initialize SQLiteStore, falling back to MemoryStore:', e);
             return undefined;

@@ -105,18 +105,57 @@ export class StatusService {
     }
  
     async getStatusForGroup(groupId: string) {
-        const members = this.db.prepare('SELECT streamer_login FROM group_members WHERE group_id = ?').all() as { streamer_login: string }[];
+        const members = this.db.prepare('SELECT streamer_login FROM group_members WHERE group_id = ?').all(groupId) as { streamer_login: string }[];
         const logins = members.map(m => m.streamer_login);
- 
+        
         if (logins.length === 0) return [];
- 
+        
         const placeholders = logins.map(() => '?').join(',');
         const statuses = this.db.prepare(`
             SELECT * FROM streamer_cache 
             WHERE streamer_login IN (${placeholders})
         `).all(...logins) as any[];
- 
+        
         return statuses;
+    }
+
+    async updateStatusesForGroup(groupId: string) {
+        const members = this.db.prepare('SELECT streamer_login FROM group_members WHERE group_id = ?').all(groupId) as { streamer_login: string }[];
+        const usernames = members.map(m => m.streamer_login);
+
+        if (usernames.length === 0) return;
+
+        // Update statuses for this specific group's members
+        const liveStreamers = await this.twitch.getLiveStreamers(usernames);
+        const liveLogins = new Set(liveStreamers.map(s => s.user_login.toLowerCase()));
+
+        const updateLive = this.db.prepare(`
+            INSERT INTO streamer_cache (streamer_login, display_name, profile_image_url, is_live, stream_title, thumbnail_url, last_updated)
+            VALUES (?, ?, ?, 1, ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(streamer_login) DO UPDATE SET
+                is_live = 1,
+                stream_title = excluded.stream_title,
+                thumbnail_url = excluded.thumbnail_url,
+                last_updated = CURRENT_TIMESTAMP
+        `);
+
+        for (const s of liveStreamers) {
+            updateLive.run(s.user_login.toLowerCase(), s.displayName, s.profile_image_url, s.title, s.thumbnail_url);
+        }
+
+        const updateOffline = this.db.prepare(`
+            INSERT INTO streamer_cache (streamer_login, is_live, last_updated)
+            VALUES (?, 0, CURRENT_TIMESTAMP)
+            ON CONFLICT(streamer_login) DO UPDATE SET
+                is_live = 0,
+                last_updated = CURRENT_TIMESTAMP
+        `);
+
+        for (const login of usernames) {
+            if (!liveLogins.has(login.toLowerCase())) {
+                updateOffline.run(login.toLowerCase());
+            }
+        }
     }
 }
  
