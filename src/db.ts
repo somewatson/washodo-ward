@@ -48,8 +48,8 @@ export class DbManager {
             VALUES (?, 'system', 'Washodo Friends', 'Friends of the house', 1)
         `, [friendsGroupId]);
 
-        const members = ['washodo', 'streamer1', 'streamer2']; 
-        const friends = ['friend1', 'friend2', 'friend3'];
+        const members = (process.env.WASHODO_MEMBERS || '').split(',').filter(Boolean);
+        const friends = (process.env.WASHODO_FRIENDS || '').split(',').filter(Boolean);
 
         for (const login of members) {
             await db.run(`INSERT OR IGNORE INTO group_members (group_id, streamer_login) VALUES (?, ?)`, [membersGroupId, login]);

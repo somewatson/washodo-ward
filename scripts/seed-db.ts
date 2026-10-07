@@ -27,8 +27,8 @@ async function seed() {
 
     // Define the streamers
     // Note: Replace these with actual twitch logins if these are placeholders
-    const members = ['washodo', 'streamer1', 'streamer2']; 
-    const friends = ['friend1', 'friend2', 'friend3'];
+    const members = process.env.WASHODO_MEMBERS ? process.env.WASHODO_MEMBERS.split(',') : ['washodo'];
+    const friends = process.env.WASHODO_FRIENDS ? process.env.WASHODO_FRIENDS.split(',') : ['friend'];
 
     console.log(`[Seeder] Seeding ${members.length} members and ${friends.length} friends...`);
 
