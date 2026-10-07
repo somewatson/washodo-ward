@@ -105,7 +105,7 @@ export class StatusService {
         const placeholders = logins.map(() => '?').join(',');
         const statuses = await db.all(`
             SELECT 
-                gm.streamer_login, 
+                gm.streamer_login as login, 
                 COALESCE(sc.display_name, gm.streamer_login) as display_name, 
                 sc.profile_image_url, 
                 COALESCE(sc.is_live, 0) as is_live, 
