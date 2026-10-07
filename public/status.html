@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Community Status | TwitchWatch</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/inter-ui@3.19.3/inter.css">
+    <style>
+        :root {
+            --primary: #a970ff;
+            --bg: #0e0e10;
+            --bg-card: #1f1f23;
+            --text: #efeff1;
+            --text-muted: #adadb8;
+            --live: #ff4b4b;
+            --offline: #888;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 5%;
+            background: rgba(14, 14, 16, 0.8);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--primary);
+            text-decoration: none;
+            letter-spacing: -1px;
+        }
+        nav a {
+            color: var(--text);
+            text-decoration: none;
+            margin-left: 25px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 0 5%;
+        }
+        .page-title {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .page-title h1 {
+            font-size: 42px;
+            font-weight: 800;
+            margin-bottom: 10px;
+        }
+        .page-title p {
+            color: var(--text-muted);
+            font-size: 18px;
+        }
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .status-card {
+            background: var(--bg-card);
+            padding: 20px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            border: 1px solid rgba(255,255,255,0.05);
+            text-decoration: none;
+            color: inherit;
+            transition: transform 0.2s, background 0.2s;
+        }
+        .status-card:hover {
+            transform: translateY(-3px);
+            background: #2a2a30;
+        }
+        .avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .name {
+            font-weight: 600;
+            font-size: 16px;
+        }
+        .status-badge {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .status-badge::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .live .status-badge { color: var(--live); }
+        .live .status-badge::before { background-color: var(--live); box-shadow: 0 0 8px var(--live); }
+        .offline .status-badge { color: var(--offline); }
+        .offline .status-badge::before { background-color: var(--offline); }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="/" class="logo">TwitchWatch</a>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/dashboard">Dashboard</a>
+        </nav>
+    </header>
+
+    <div class="container">
+        <div class="page-title">
+            <h1>Community Status</h1>
+            <p>Real-time status of Washodo community members</p>
+        </div>
+        <div id="status-grid" class="status-grid">
+            <p style="text-align: center; grid-column: 1 / -1; color: var(--text-muted);">Loading statuses...</p>
+        </div>
+    </div>
+
+    <script>
+        async function fetchStatuses() {
+            try {
+                const response = await fetch('/api/public/status');
+                const data = await response.json();
+                const grid = document.getElementById('status-grid');
+                
+                if (!data || data.length === 0) {
+                    grid.innerHTML = '<p style="text-align: center; grid-column: 1 / -1; color: var(--text-muted);">No streamers found.</p>';
+                    return;
+                }
+
+                grid.innerHTML = data.map(s => `
+                    <a href="https://twitch.tv/${s.login}" target="_blank" class="status-card ${s.is_live ? 'live' : 'offline'}">
+                        <img src="${s.profile_image_url || 'https://via.placeholder.com/50'}" class="avatar">
+                        <div class="info">
+                            <span class="name">${s.display_name}</span>
+                            <span class="status-badge">${s.is_live ? 'Live Now' : 'Offline'}</span>
+                        </div>
+                    </a>
+                `).join('');
+            } catch (e) {
+                console.error('Error fetching statuses:', e);
+                document.getElementById('status-grid').innerHTML = '<p style="text-align: center; grid-column: 1 / -1; color: var(--text-muted);">Error loading statuses.</p>';
+            }
+        }
+
+        fetchStatuses();
+        setInterval(fetchStatuses, 60000); // Refresh every minute
+    </script>
+</body>
+</html>
