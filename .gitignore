@@ -23,3 +23,9 @@ Thumbs.db
 
 # Database files
 *.sqlite
+
+# TypeScript build artifacts
+*.js
+*.d.ts
+*.d.ts.map
+*.js.map
