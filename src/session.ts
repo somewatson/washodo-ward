@@ -13,7 +13,7 @@ export const sessionConfig = session({
             const session = require('express-session');
             const SQLiteStoreFactory = require('connect-sqlite3');
             const SQLiteStore = SQLiteStoreFactory(session);
-            return new SQLiteStore({ db: 'sessions.sqlite' });
+            return new SQLiteStore({ db: 'data/sessions.sqlite' });
         } catch (e) {
             console.error('Failed to initialize SQLiteStore, falling back to MemoryStore:', e);
             return undefined;
