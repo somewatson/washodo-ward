@@ -11,7 +11,9 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install
+
+# Clean install to ensure no cached binaries from different node versions are used
+RUN npm ci || npm install
 
 COPY . .
 RUN npm run build
