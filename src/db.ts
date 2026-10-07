@@ -7,7 +7,7 @@ export class DbManager {
     private promiseDb: any = null;
 
     constructor() {
-        const dbPath = path.join(process.cwd(), 'database.sqlite');
+        const dbPath = path.join(process.cwd(), 'data', 'database.sqlite');
         
         // We initialize the connection asynchronously
         this.promiseDb = open({
