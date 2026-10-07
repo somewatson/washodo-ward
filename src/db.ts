@@ -24,6 +24,43 @@ export class DbManager {
         console.log('[DbManager] Initializing database schema...');
         await this.init(db);
         console.log('[DbManager] Database schema initialized.');
+        
+        await this.seedDefaults(db);
+    }
+
+    private async seedDefaults(db: any) {
+        // Check if we already have groups to avoid double seeding
+        const groupCount = await db.get('SELECT count(*) as count FROM groups');
+        if (groupCount.count > 0) return;
+
+        console.log('[DbManager] Seeding default Washodo groups...');
+        
+        const membersGroupId = 'group-washodo-members';
+        const friendsGroupId = 'group-washodo-friends';
+
+        await db.run(`
+            INSERT OR IGNORE INTO groups (id, owner_id, name, status_message, is_public)
+            VALUES (?, 'system', 'Washodo Members', 'The core Washodo team', 1)
+        `, [membersGroupId]);
+
+        await db.run(`
+            INSERT OR IGNORE INTO groups (id, owner_id, name, status_message, is_public)
+            VALUES (?, 'system', 'Washodo Friends', 'Friends of the house', 1)
+        `, [friendsGroupId]);
+
+        const members = ['washodo', 'streamer1', 'streamer2']; 
+        const friends = ['friend1', 'friend2', 'friend3'];
+
+        for (const login of members) {
+            await db.run(`INSERT OR IGNORE INTO group_members (group_id, streamer_login) VALUES (?, ?)`, [membersGroupId, login]);
+            await db.run(`INSERT OR IGNORE INTO streamer_cache (streamer_login, display_name) VALUES (?, ?)`, [login, login]);
+        }
+
+        for (const login of friends) {
+            await db.run(`INSERT OR IGNORE INTO group_members (group_id, streamer_login) VALUES (?, ?)`, [friendsGroupId, login]);
+            await db.run(`INSERT OR IGNORE INTO streamer_cache (streamer_login, display_name) VALUES (?, ?)`, [login, login]);
+        }
+        console.log('[DbManager] Default seeding completed.');
     }
 
     private async init(db: any) {
