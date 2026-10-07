@@ -4,6 +4,10 @@ import { worker } from './worker';
 async function main() {
     console.log('[Main] Starting friends.washodo.tv...');
     
+    // Initialize database schema first
+    const { dbManager } = require('./db');
+    await dbManager.initialize();
+
     const server = new ApiServer();
     await server.start();
 

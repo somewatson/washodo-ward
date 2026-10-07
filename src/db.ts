@@ -9,18 +9,21 @@ export class DbManager {
     constructor() {
         const dbPath = path.join(process.cwd(), 'data', 'database.sqlite');
         
-        // We initialize the connection asynchronously
         this.promiseDb = open({
             filename: dbPath,
             driver: sqlite3.Database
-        }).then(db => {
-            this.db = db;
-            this.init(db);
-            return db;
         }).catch(err => {
             console.error('Failed to open database:', err);
             throw err;
         });
+    }
+
+    async initialize() {
+        const db = await this.promiseDb;
+        this.db = db;
+        console.log('[DbManager] Initializing database schema...');
+        await this.init(db);
+        console.log('[DbManager] Database schema initialized.');
     }
 
     private async init(db: any) {
