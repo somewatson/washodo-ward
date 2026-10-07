@@ -1,5 +1,7 @@
 import Database from 'better-sqlite3';
+import type { Database as DatabaseType } from 'better-sqlite3';
 import path from 'path';
+
 
 export class DbManager {
     private db: Database.Database;
@@ -104,7 +106,7 @@ export class DbManager {
         `);
     }
 
-    getDb() {
+    getDb(): DatabaseType {
         return this.db;
     }
 }
