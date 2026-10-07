@@ -271,8 +271,8 @@ export class ApiServer {
             }
             
             const renderItems = statuses.map(s => `
-                <a href="https://twitch.tv/${s.streamer_login}" target="_blank" class="widget-item ${s.is_live ? 'live' : 'offline'}" 
-                   onclick="fetch('api/analytics/click?groupId=${groupId}&streamer=${s.streamer_login}')">
+                <a href="https://twitch.tv/${s.login}" target="_blank" class="widget-item ${s.is_live ? 'live' : 'offline'}" 
+                   onclick="fetch('api/analytics/click?groupId=${groupId}&streamer=${s.login}')">
                     <img src="${s.profile_image_url || 'https://via.placeholder.com/32'}" class="avatar">
                     <span class="name">${s.display_name}</span>
                     <span class="status">${s.is_live ? 'LIVE' : 'Offline'}</span>
