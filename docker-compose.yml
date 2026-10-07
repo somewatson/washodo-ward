@@ -2,6 +2,7 @@ services:
   twitch-notifier:
     build: .
     container_name: twitch-notifier
+    user: "1000:1000"
     restart: unless-stopped
     env_file:
       - .env
