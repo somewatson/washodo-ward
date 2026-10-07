@@ -6,8 +6,8 @@ services:
     env_file:
       - .env
     volumes:
-      - ./database.sqlite:/app/database.sqlite
-      - ./sessions.sqlite:/app/sessions.sqlite
+      - .:/app
+
     ports:
       - "3001:3001"
 
