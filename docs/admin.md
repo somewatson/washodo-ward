@@ -4,6 +4,15 @@ This guide is intended for the person deploying and managing the friends.washodo
 
 ## 🚀 Deployment Guide
 
+### Hardware & OS Compatibility
+The application is fully compatible with both **x86_64 (AMD64)** and **ARM64 (AArch64)** architectures. This includes support for:
+- Standard Linux servers (Ubuntu, Debian, etc.)
+- Apple Silicon (M1/M2/M3)
+- Raspberry Pi
+- Cloud providers (AWS Graviton, etc.)
+
+If deploying via Docker, the provided `Dockerfile` handles the native compilation of SQLite for both architectures.
+
 ### Environment Variables
 Create a `.env` file in the root directory with the following variables:
 

@@ -21,10 +21,16 @@ This platform is designed to be used both as a managed SaaS and as a self-hosted
 - **Self-Hosted Mode**: Instance administrators can override global keys via the **Admin** panel in the dashboard. This allows self-hosters to use their own Twitch Developer App credentials to avoid quota issues and comply with their own developer agreements.
 
 ## 🛠️ Tech Stack
-- **Backend**: Node.js / Express
+- **Backend**: Node.js (v20 LTS) / Express
 - **Database**: SQLite (`better-sqlite3`)
 - **Authentication**: Twitch OAuth2
 - **Worker**: Background polling every 5 minutes
+
+## 🌍 Compatibility
+The project is designed to be cross-platform and compatible with:
+- **x86_64 (AMD64)**: Standard desktop and server environments.
+- **ARM64 (AArch64)**: Apple Silicon (M1/M2/M3), Raspberry Pi, and AWS Graviton.
+- **Docker**: Provided `Dockerfile` is optimized for both architectures using a multi-stage build.
 
 ## 📖 Documentation
 - **[Administrator Guide](/docs/admin.md)**: Deployment, Twitch App registration, and instance configuration.

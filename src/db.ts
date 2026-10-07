@@ -1,20 +1,31 @@
-import Database from 'better-sqlite3';
-import type { Database as DatabaseType } from 'better-sqlite3';
+import sqlite3 from 'sqlite3';
+import { open } from 'sqlite';
 import path from 'path';
 
-
 export class DbManager {
-    private db: Database.Database;
+    private db: sqlite3.Database | null = null;
+    private promiseDb: any = null;
 
     constructor() {
         const dbPath = path.join(process.cwd(), 'database.sqlite');
-        this.db = new Database(dbPath);
-        this.init();
+        
+        // We initialize the connection asynchronously
+        this.promiseDb = open({
+            filename: dbPath,
+            driver: sqlite3.Database
+        }).then(db => {
+            this.db = db;
+            this.init(db);
+            return db;
+        }).catch(err => {
+            console.error('Failed to open database:', err);
+            throw err;
+        });
     }
 
-    private init() {
+    private async init(db: any) {
         // Users table
-        this.db.exec(`
+        await db.exec(`
             CREATE TABLE IF NOT EXISTS users (
                 id TEXT PRIMARY KEY,
                 twitch_id TEXT UNIQUE NOT NULL,
@@ -29,7 +40,7 @@ export class DbManager {
         `);
 
         // Groups table
-        this.db.exec(`
+        await db.exec(`
             CREATE TABLE IF NOT EXISTS groups (
                 id TEXT PRIMARY KEY,
                 owner_id TEXT NOT NULL,
@@ -42,7 +53,7 @@ export class DbManager {
         `);
 
         // Group Members table
-        this.db.exec(`
+        await db.exec(`
             CREATE TABLE IF NOT EXISTS group_members (
                 group_id TEXT NOT NULL,
                 streamer_login TEXT NOT NULL,
@@ -53,7 +64,7 @@ export class DbManager {
         `);
 
         // Streamer Cache table
-        this.db.exec(`
+        await db.exec(`
             CREATE TABLE IF NOT EXISTS streamer_cache (
                 streamer_login TEXT PRIMARY KEY,
                 display_name TEXT,
@@ -66,7 +77,7 @@ export class DbManager {
         `);
 
         // Analytics table
-        this.db.exec(`
+        await db.exec(`
             CREATE TABLE IF NOT EXISTS analytics (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 group_id TEXT,
@@ -80,7 +91,7 @@ export class DbManager {
         `);
 
         // Webhook Destinations table
-        this.db.exec(`
+        await db.exec(`
             CREATE TABLE IF NOT EXISTS webhook_destinations (
                 id TEXT PRIMARY KEY,
                 group_id TEXT NOT NULL,
@@ -93,8 +104,8 @@ export class DbManager {
             )
         `);
 
-        // Notification State table (to track when we last notified for a specific streamer in a group)
-        this.db.exec(`
+        // Notification State table
+        await db.exec(`
             CREATE TABLE IF NOT EXISTS notification_state (
                 group_id TEXT NOT NULL,
                 streamer_login TEXT NOT NULL,
@@ -106,8 +117,8 @@ export class DbManager {
         `);
     }
 
-    getDb(): DatabaseType {
-        return this.db;
+    async getDb() {
+        return this.promiseDb;
     }
 }
 

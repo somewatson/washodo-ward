@@ -25,15 +25,14 @@ export class ApiServer {
     private server: any;
 
     constructor() {
-        this.setupDatabase();
         this.setupMiddleware();
         this.setupRoutes();
     }
 
-    private setupDatabase() {
-        const db = dbManager.getDb();
+    private async setupDatabase() {
+        const db = await dbManager.getDb();
         try {
-            db.prepare('ALTER TABLE groups ADD COLUMN last_refresh_at DATETIME').run();
+            await db.exec('ALTER TABLE groups ADD COLUMN last_refresh_at DATETIME');
         } catch (e) {
             // Column might already exist
         }
@@ -54,16 +53,16 @@ export class ApiServer {
             const sessionUser = authenticatedReq.session.userId;
             if (!sessionUser) return res.status(401).send('Unauthorized');
 
-            const db = dbManager.getDb();
-            const user = db.prepare('SELECT id FROM users WHERE id = ?').get(sessionUser) as any;
+            const db = await dbManager.getDb();
+            const user = await db.get('SELECT id FROM users WHERE id = ?', sessionUser) as any;
             
             // Simple admin check: the first user in the DB is the admin
-            const firstUser = db.prepare('SELECT id FROM users ORDER BY created_at ASC LIMIT 1').get() as any;
+            const firstUser = await db.get('SELECT id FROM users ORDER BY created_at ASC LIMIT 1') as any;
             if (!firstUser || firstUser.id !== sessionUser) return res.status(403).send('Forbidden');
 
             const { clientId, clientSecret } = req.body;
             try {
-                db.prepare('UPDATE users SET client_id = ?, client_secret = ? WHERE id = ?').run(clientId, clientSecret, sessionUser);
+                await db.run('UPDATE users SET client_id = ?, client_secret = ? WHERE id = ?', clientId, clientSecret, sessionUser);
                 res.json({ success: true });
             } catch (e: any) {
                 res.status(500).json({ error: e.message });
@@ -85,17 +84,15 @@ export class ApiServer {
                 const user = await twitchAuth.getUserInfo(accessToken);
                 const email = await twitchAuth.getUserEmail(accessToken);
 
-                const db = dbManager.getDb();
-                const upsertUser = db.prepare(`
+                const db = await dbManager.getDb();
+                const userId = uuidv4();
+                await db.run(`
                     INSERT INTO users (id, twitch_id, username, display_name, email)
                     VALUES (?, ?, ?, ?, ?)
                     ON CONFLICT(twitch_id) DO UPDATE SET
                         display_name = excluded.display_name,
                         email = excluded.email
-                `);
-                
-                const userId = uuidv4();
-                upsertUser.run(userId, user.id, user.login, user.display_name, email);
+                `, userId, user.id, user.login, user.display_name, email);
 
                 // Set session
                 authenticatedReq.session.userId = userId;
@@ -108,7 +105,7 @@ export class ApiServer {
             }
         });
 
-        router.get('/auth/logout', (req: Request, res: Response) => {
+        router.get('/auth/logout', (req, res) => {
             const authenticatedReq = req as AuthenticatedRequest;
             authenticatedReq.session.destroy(() => {
                 res.redirect('/');
@@ -140,12 +137,12 @@ export class ApiServer {
             const { id } = req.params;
             const { statusMessage } = req.body;
 
-            const db = dbManager.getDb();
-            const group = db.prepare('SELECT owner_id FROM groups WHERE id = ?').get(id) as any;
+            const db = await dbManager.getDb();
+            const group = await db.get('SELECT owner_id FROM groups WHERE id = ?', id) as any;
             if (!group || group.owner_id !== sessionUser) return res.status(403).send('Forbidden');
 
             try {
-                db.prepare('UPDATE groups SET status_message = ? WHERE id = ?').run(statusMessage, id);
+                await db.run('UPDATE groups SET status_message = ? WHERE id = ?', statusMessage, id);
                 res.json({ success: true });
             } catch (e: any) {
                 res.status(500).json({ error: e.message });
@@ -163,8 +160,8 @@ export class ApiServer {
             const sessionUser = authenticatedReq.session.userId;
             if (!sessionUser) return res.status(401).send('Unauthorized');
 
-            const db = dbManager.getDb();
-            const groups = db.prepare('SELECT * FROM groups WHERE owner_id = ?').all(sessionUser) as any[];
+            const db = await dbManager.getDb();
+            const groups = await db.all('SELECT * FROM groups WHERE owner_id = ?', sessionUser) as any[];
             
             const detailedGroups = await Promise.all(groups.map(async g => {
                 const members = await groupService.getMembers(g.id);
@@ -177,8 +174,8 @@ export class ApiServer {
 
         // --- STATUS & WIDGET ROUTES ---
         router.get('/api/status/all', async (req, res) => {
-            const db = dbManager.getDb();
-            const allCached = db.prepare('SELECT * FROM streamer_cache').all() as any[];
+            const db = await dbManager.getDb();
+            const allCached = await db.all('SELECT * FROM streamer_cache') as any[];
             
             const statusMap: Record<string, any> = {};
             allCached.forEach(s => {
@@ -193,17 +190,16 @@ export class ApiServer {
         router.get('/api/status/:groupId', async (req, res) => {
             const id = req.params.groupId;
 
-            
             // Try to see if it's a groupId or a streamer login
-            const db = dbManager.getDb();
-            const group = db.prepare('SELECT id FROM groups WHERE id = ?').get(id);
+            const db = await dbManager.getDb();
+            const group = await db.get('SELECT id FROM groups WHERE id = ?', id);
             
             if (group) {
                 const statuses = await statusService.getStatusForGroup(id);
                 res.json(statuses);
             } else {
                 // It might be a streamer login, let's return their status if found in cache
-                const cached = db.prepare('SELECT * FROM streamer_cache WHERE streamer_login = ?').get(id) as any;
+                const cached = await db.get('SELECT * FROM streamer_cache WHERE streamer_login = ?', id) as any;
                 if (cached) {
                     res.json([cached]);
                 } else {
@@ -218,8 +214,8 @@ export class ApiServer {
             const groupId = req.params.groupId as string;
             const apiKey = req.headers['x-api-key'] as string;
 
-            const db = dbManager.getDb();
-            const group = db.prepare('SELECT owner_id, last_refresh_at FROM groups WHERE id = ?').get(groupId) as any;
+            const db = await dbManager.getDb();
+            const group = await db.get('SELECT owner_id, last_refresh_at FROM groups WHERE id = ?', groupId) as any;
 
             if (!group) return res.status(404).send('Group not found');
 
@@ -248,7 +244,7 @@ export class ApiServer {
 
             try {
                 await statusService.updateStatusesForGroup(groupId);
-                db.prepare('UPDATE groups SET last_refresh_at = ? WHERE id = ?').run(new Date().toISOString(), groupId);
+                await db.run('UPDATE groups SET last_refresh_at = ? WHERE id = ?', new Date().toISOString(), groupId);
                 
                 const updatedStatuses = await statusService.getStatusForGroup(groupId);
                 res.json({ success: true, statuses: updatedStatuses });
@@ -262,8 +258,8 @@ export class ApiServer {
             const groupId = req.params.groupId;
             
             // Fetch group status message
-            const db = dbManager.getDb();
-            const group = db.prepare('SELECT status_message FROM groups WHERE id = ?').get(groupId) as any;
+            const db = await dbManager.getDb();
+            const group = await db.get('SELECT status_message FROM groups WHERE id = ?', groupId) as any;
             const statusMessage = group?.status_message || '';
 
             const statuses = await statusService.getStatusForGroup(groupId);
@@ -344,11 +340,8 @@ export class ApiServer {
 
         router.get('/api/public/status', async (req, res) => {
             try {
-                // For now, we'll return statuses from the first group found in the DB 
-                // (treating it as the "Community" group). In a real SaaS, this would
-                // be based on a 'public' flag on the group.
-                const db = dbManager.getDb();
-                const communityGroup = db.prepare('SELECT id FROM groups ORDER BY created_at ASC LIMIT 1').get() as any;
+                const db = await dbManager.getDb();
+                const communityGroup = await db.get('SELECT id FROM groups ORDER BY created_at ASC LIMIT 1') as any;
                 
                 if (!communityGroup) {
                     return res.json([]);
@@ -377,8 +370,8 @@ export class ApiServer {
             const sessionUser = authenticatedReq.session.userId;
             if (!sessionUser) return res.status(401).send('Unauthorized');
 
-            const db = dbManager.getDb();
-            const firstUser = db.prepare('SELECT id FROM users ORDER BY created_at ASC LIMIT 1').get() as any;
+            const db = await dbManager.getDb();
+            const firstUser = await db.get('SELECT id FROM users ORDER BY created_at ASC LIMIT 1') as any;
             
             res.json({
                 userId: sessionUser,
@@ -393,9 +386,8 @@ export class ApiServer {
             if (!sessionUser) return res.status(401).send('Unauthorized');
 
             const groupId = req.params.groupId as string;
-            // Security check: ensure user owns the group
-            const db = dbManager.getDb();
-            const group = db.prepare('SELECT owner_id FROM groups WHERE id = ?').get(groupId) as any;
+            const db = await dbManager.getDb();
+            const group = await db.get('SELECT owner_id FROM groups WHERE id = ?', groupId) as any;
             if (!group || group.owner_id !== sessionUser) return res.status(403).send('Forbidden');
 
             try {
@@ -414,8 +406,8 @@ export class ApiServer {
             const { groupId, url, template, provider } = req.body;
             if (!groupId || !url || !template || !provider) return res.status(400).send('Missing parameters');
 
-            const db = dbManager.getDb();
-            const group = db.prepare('SELECT owner_id FROM groups WHERE id = ?').get(groupId) as any;
+            const db = await dbManager.getDb();
+            const group = await db.get('SELECT owner_id FROM groups WHERE id = ?', groupId) as any;
             if (!group || group.owner_id !== sessionUser) return res.status(403).send('Forbidden');
 
             try {
@@ -432,11 +424,11 @@ export class ApiServer {
             if (!sessionUser) return res.status(401).send('Unauthorized');
 
             const { webhookId } = req.params;
-            const db = dbManager.getDb();
-            const webhook = db.prepare('SELECT group_id FROM webhook_destinations WHERE id = ?').get(webhookId) as any;
+            const db = await dbManager.getDb();
+            const webhook = await db.get('SELECT group_id FROM webhook_destinations WHERE id = ?', webhookId) as any;
             if (!webhook) return res.status(404).send('Webhook not found');
 
-            const group = db.prepare('SELECT owner_id FROM groups WHERE id = ?').get(webhook.group_id) as any;
+            const group = await db.get('SELECT owner_id FROM groups WHERE id = ?', webhook.group_id) as any;
             if (!group || group.owner_id !== sessionUser) return res.status(403).send('Forbidden');
 
             try {
@@ -451,6 +443,7 @@ export class ApiServer {
     }
 
     async start() {
+        await this.setupDatabase();
         this.server = this.app.listen(this.port, () => {
             console.log(`API Server running on port ${this.port}`);
         });
